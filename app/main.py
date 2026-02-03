@@ -47,6 +47,7 @@ async def debug_network():
     """Debug network connectivity to OpenAI."""
     import socket
     import ssl
+    import httpx
     
     results = {}
     
@@ -73,6 +74,14 @@ async def debug_network():
             sock.close()
     except Exception as e:
         results["tcp"] = {"status": "error", "error": str(e)}
+    
+    # Test HTTP request (what OpenAI SDK uses)
+    try:
+        with httpx.Client(timeout=30) as client:
+            resp = client.get("https://api.openai.com/v1/models")
+            results["http"] = {"status": "ok", "code": resp.status_code}
+    except Exception as e:
+        results["http"] = {"status": "error", "error": str(e), "type": type(e).__name__}
     
     return results
 
