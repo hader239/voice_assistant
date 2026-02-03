@@ -2,16 +2,22 @@
 
 import os
 import json
+import logging
 from openai import OpenAI
 
 from .models import ClassificationResult
+
+logger = logging.getLogger(__name__)
 
 
 def get_openai_client() -> OpenAI:
     """Get OpenAI client (lazy initialization)."""
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
+        logger.error("OPENAI_API_KEY environment variable is not set!")
         raise ValueError("OPENAI_API_KEY environment variable is not set")
+    # Log first/last few chars to verify key is loaded (don't log full key!)
+    logger.info(f"OpenAI API key loaded: {api_key[:8]}...{api_key[-4:]}")
     return OpenAI(api_key=api_key)
 
 SYSTEM_PROMPT = """You are a helpful assistant that classifies voice transcripts into categories and extracts structured information.
@@ -47,22 +53,41 @@ async def classify_transcript(text: str) -> ClassificationResult:
     Returns:
         ClassificationResult with category, title, and description
     """
-    client = get_openai_client()
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": text}
-        ],
-        response_format={"type": "json_object"},
-        temperature=0.3,  # Lower temperature for more consistent classification
-        max_tokens=200
-    )
+    logger.info(f"Classifying transcript: {text[:100]}...")
     
-    result = json.loads(response.choices[0].message.content)
+    try:
+        client = get_openai_client()
+    except ValueError as e:
+        logger.error(f"Failed to get OpenAI client: {e}")
+        raise
+    
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": text}
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.3,
+            max_tokens=200
+        )
+        logger.info(f"OpenAI response received")
+    except Exception as e:
+        logger.error(f"OpenAI API call failed: {type(e).__name__}: {e}")
+        raise
+    
+    try:
+        result = json.loads(response.choices[0].message.content)
+        logger.info(f"Parsed result: {result}")
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to parse OpenAI response: {e}")
+        logger.error(f"Raw response: {response.choices[0].message.content}")
+        raise
     
     return ClassificationResult(
         category=result.get("category", "idea"),
         title=result.get("title", "Untitled"),
         description=result.get("description", text)
     )
+
