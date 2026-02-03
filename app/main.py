@@ -4,6 +4,13 @@ import logging
 from fastapi import FastAPI, HTTPException, Header
 from dotenv import load_dotenv
 
+# Fix SSL certificate issues on Railway
+try:
+    import truststore
+    truststore.inject_into_ssl()
+except ImportError:
+    pass  # truststore not installed, skip
+
 from .models import TranscriptRequest, APIResponse
 from .auth import get_user_config
 from .classifier import classify_transcript
