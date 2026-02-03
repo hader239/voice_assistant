@@ -46,6 +46,7 @@ async def openai_health_check():
 async def debug_network():
     """Debug network connectivity to OpenAI."""
     import socket
+    import ssl
     
     results = {}
     
@@ -59,8 +60,17 @@ async def debug_network():
     # Test TCP connection to port 443
     try:
         sock = socket.create_connection(("api.openai.com", 443), timeout=10)
-        sock.close()
         results["tcp"] = {"status": "ok"}
+        
+        # Test TLS handshake
+        try:
+            context = ssl.create_default_context()
+            with context.wrap_socket(sock, server_hostname="api.openai.com") as ssock:
+                results["tls"] = {"status": "ok", "version": ssock.version()}
+        except Exception as e:
+            results["tls"] = {"status": "error", "error": str(e)}
+        finally:
+            sock.close()
     except Exception as e:
         results["tcp"] = {"status": "error", "error": str(e)}
     
