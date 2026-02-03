@@ -30,6 +30,18 @@ async def health_check():
     return {"status": "healthy"}
 
 
+@app.get("/health/openai")
+async def openai_health_check():
+    """Test OpenAI API connectivity."""
+    from .classifier import get_client
+    try:
+        client = get_client()
+        models = client.models.list()
+        return {"status": "connected", "models_available": len(models.data)}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
 @app.post("/process", response_model=APIResponse)
 async def process_transcript(
     request: TranscriptRequest,
