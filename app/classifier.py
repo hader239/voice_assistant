@@ -1,5 +1,6 @@
 """OpenAI-based transcript classification."""
 
+import os
 import json
 import logging
 from openai import OpenAI
@@ -26,13 +27,19 @@ You MUST respond with ONLY a valid JSON object (no markdown, no explanation) con
 Example response: {"category": "task", "title": "Call mom", "description": "Need to call mom tomorrow"}
 """
 
-# Lazy client initialization
-_client = None
 
 def get_client():
-    global _client
-    if _client is None:
-        _client = OpenAI()  # Uses OPENAI_API_KEY from environment
+    api_key = os.getenv("OPENAI_API_KEY") 
+    if api_key:
+        logger.info(f"OpenAI API key loaded: {api_key[:8]}...{api_key[-4:]}")
+    else:
+        logger.error("OPENAI_API_KEY not found in environment!")
+    _client = OpenAI()
+    if _client.api_key is None:
+        logger.error("OpenAI key not initialized")
+        raise ValueError("OpenAI key not initialized")
+    else:
+        logger.info("OpenAI key initialized")
     return _client
 
 
@@ -45,9 +52,6 @@ async def classify_transcript(text: str) -> ClassificationResult:
     # Add JSON hint to input to satisfy json_object format requirement
     input_with_hint = f"Please classify this transcript and respond with JSON: {text}"
     _client = get_client()
-    if _client is None:
-        logger.error("OpenAI client not initialized")
-        raise ValueError("OpenAI client not initialized")
     logger.info("Client initialized, sending request to OpenAI")
     response = _client.responses.create(
         model="gpt-5-mini-2025-08-07",
