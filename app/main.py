@@ -79,9 +79,23 @@ async def debug_network():
     try:
         with httpx.Client(timeout=30) as client:
             resp = client.get("https://api.openai.com/v1/models")
-            results["http"] = {"status": "ok", "code": resp.status_code}
+            results["http_get"] = {"status": "ok", "code": resp.status_code}
     except Exception as e:
-        results["http"] = {"status": "error", "error": str(e), "type": type(e).__name__}
+        results["http_get"] = {"status": "error", "error": str(e), "type": type(e).__name__}
+    
+    # Test POST to /responses (exactly what SDK does)
+    import os
+    api_key = os.getenv("OPENAI_API_KEY")
+    try:
+        with httpx.Client(timeout=60) as client:
+            resp = client.post(
+                "https://api.openai.com/v1/responses",
+                headers={"Authorization": f"Bearer {api_key}"},
+                json={"model": "gpt-4o-mini", "input": "test"}
+            )
+            results["http_post"] = {"status": "ok", "code": resp.status_code}
+    except Exception as e:
+        results["http_post"] = {"status": "error", "error": str(e), "type": type(e).__name__}
     
     return results
 
