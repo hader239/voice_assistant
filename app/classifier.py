@@ -50,7 +50,7 @@ async def classify_transcript(text: str) -> ClassificationResult:
         raise ValueError("OpenAI client not initialized")
     logger.info("Client initialized, sending request to OpenAI")
     response = _client.responses.create(
-        model="gpt-5.2",
+        model="gpt-5-mini-2025-08-07",
         instructions=SYSTEM_PROMPT,
         input=input_with_hint,
         text={"format": {"type": "json_object"}}
