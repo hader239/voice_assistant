@@ -42,6 +42,31 @@ async def openai_health_check():
         return {"status": "error", "error": str(e)}
 
 
+@app.get("/debug/network")
+async def debug_network():
+    """Debug network connectivity to OpenAI."""
+    import socket
+    
+    results = {}
+    
+    # Test DNS resolution
+    try:
+        ip = socket.gethostbyname("api.openai.com")
+        results["dns"] = {"status": "ok", "ip": ip}
+    except Exception as e:
+        results["dns"] = {"status": "error", "error": str(e)}
+    
+    # Test TCP connection to port 443
+    try:
+        sock = socket.create_connection(("api.openai.com", 443), timeout=10)
+        sock.close()
+        results["tcp"] = {"status": "ok"}
+    except Exception as e:
+        results["tcp"] = {"status": "error", "error": str(e)}
+    
+    return results
+
+
 @app.post("/process", response_model=APIResponse)
 async def process_transcript(
     request: TranscriptRequest,

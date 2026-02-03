@@ -35,7 +35,7 @@ def get_client():
     else:
         logger.error("OPENAI_API_KEY not found in environment!")
     _client = OpenAI()
-    if _client.api_key is None:
+    if _client.api_key != api_key:
         logger.error("OpenAI key not initialized")
         raise ValueError("OpenAI key not initialized")
     else:
