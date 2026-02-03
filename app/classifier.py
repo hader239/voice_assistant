@@ -3,22 +3,40 @@
 import os
 import json
 import logging
+import httpx
 from openai import OpenAI
 
 from .models import ClassificationResult
 
 logger = logging.getLogger(__name__)
 
+# Cache the client to avoid recreating it
+_openai_client = None
+
 
 def get_openai_client() -> OpenAI:
-    """Get OpenAI client (lazy initialization)."""
+    """Get OpenAI client (lazy initialization with caching)."""
+    global _openai_client
+    
+    if _openai_client is not None:
+        return _openai_client
+    
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         logger.error("OPENAI_API_KEY environment variable is not set!")
         raise ValueError("OPENAI_API_KEY environment variable is not set")
-    # Log first/last few chars to verify key is loaded (don't log full key!)
+    
     logger.info(f"OpenAI API key loaded: {api_key[:8]}...{api_key[-4:]}")
-    return OpenAI(api_key=api_key)
+    
+    # Create client with explicit configuration for Railway
+    _openai_client = OpenAI(
+        api_key=api_key,
+        base_url="https://api.openai.com/v1",
+        timeout=httpx.Timeout(60.0, connect=30.0),
+        max_retries=3,
+    )
+    
+    return _openai_client
 
 SYSTEM_PROMPT = """You are a helpful assistant that classifies voice transcripts into categories and extracts structured information.
 
