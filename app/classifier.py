@@ -44,9 +44,12 @@ async def classify_transcript(text: str) -> ClassificationResult:
     
     # Add JSON hint to input to satisfy json_object format requirement
     input_with_hint = f"Please classify this transcript and respond with JSON: {text}"
-    
-    response = get_client().responses.create(
-        model="gpt-4o-mini",
+    _client = get_client()
+    if _client is None:
+        logger.error("OpenAI client not initialized")
+        raise ValueError("OpenAI client not initialized")
+    response = _client.responses.create(
+        model="gpt-5.2",
         instructions=SYSTEM_PROMPT,
         input=input_with_hint,
         text={"format": {"type": "json_object"}}
