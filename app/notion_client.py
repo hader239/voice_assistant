@@ -34,7 +34,7 @@ async def save_entry(
             "Name": {"title": [{"text": {"content": title}}]},
             "Type": {"select": {"name": category.capitalize()}},
             "Checkbox": {"checkbox": False}, # Always false
-            "Description": {"text": {"content": description}}
+            "Description": {"rich_text": [{"text": {"content": description}}]}
         }
         
         # Add date for appointments
@@ -47,14 +47,7 @@ async def save_entry(
         
         get_client().pages.create(
             parent={"database_id": database_id},
-            properties=properties,
-            children=[{
-                "object": "block",
-                "type": "paragraph",
-                "paragraph": {
-                    "rich_text": [{"type": "text", "text": {"content": description}}]
-                }
-            }]
+            properties=properties
         )
         logger.info(f"Saved {category} to Notion: {title}")
         return True
