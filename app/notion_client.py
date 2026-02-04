@@ -34,6 +34,7 @@ async def save_entry(
             "Name": {"title": [{"text": {"content": title}}]},
             "Type": {"select": {"name": category.capitalize()}},
             "Checkbox": {"checkbox": False}  # Always false
+            "Description": {"text": {"content": description}}
         }
         
         # Add date for appointments
