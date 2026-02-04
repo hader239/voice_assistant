@@ -7,7 +7,8 @@ from dotenv import load_dotenv
 from .models import TranscriptRequest, APIResponse
 from .auth import get_user_config
 from .classifier import classify_transcript
-from .notion_client import save_idea, save_task, save_appointment, save_spending
+from .notion_client import save_entry
+from .debug import router as debug_router
 
 # Load environment variables from .env file (for local development)
 load_dotenv()
@@ -23,81 +24,8 @@ app = FastAPI(
     version="1.0.0"
 )
 
-
-@app.get("/health")
-async def health_check():
-    """Health check endpoint for Railway."""
-    return {"status": "healthy"}
-
-
-@app.get("/health/openai")
-async def openai_health_check():
-    """Test OpenAI API connectivity."""
-    from .classifier import get_client
-    try:
-        client = get_client()
-        models = client.models.list()
-        return {"status": "connected", "models_available": len(models.data)}
-    except Exception as e:
-        return {"status": "error", "error": str(e)}
-
-
-@app.get("/debug/network")
-async def debug_network():
-    """Debug network connectivity to OpenAI."""
-    import socket
-    import ssl
-    import httpx
-    
-    results = {}
-    
-    # Test DNS resolution
-    try:
-        ip = socket.gethostbyname("api.openai.com")
-        results["dns"] = {"status": "ok", "ip": ip}
-    except Exception as e:
-        results["dns"] = {"status": "error", "error": str(e)}
-    
-    # Test TCP connection to port 443
-    try:
-        sock = socket.create_connection(("api.openai.com", 443), timeout=10)
-        results["tcp"] = {"status": "ok"}
-        
-        # Test TLS handshake
-        try:
-            context = ssl.create_default_context()
-            with context.wrap_socket(sock, server_hostname="api.openai.com") as ssock:
-                results["tls"] = {"status": "ok", "version": ssock.version()}
-        except Exception as e:
-            results["tls"] = {"status": "error", "error": str(e)}
-        finally:
-            sock.close()
-    except Exception as e:
-        results["tcp"] = {"status": "error", "error": str(e)}
-    
-    # Test HTTP request (what OpenAI SDK uses)
-    try:
-        with httpx.Client(timeout=30) as client:
-            resp = client.get("https://api.openai.com/v1/models")
-            results["http_get"] = {"status": "ok", "code": resp.status_code}
-    except Exception as e:
-        results["http_get"] = {"status": "error", "error": str(e), "type": type(e).__name__}
-    
-    # Test POST to /responses (exactly what SDK does)
-    import os
-    api_key = os.getenv("OPENAI_API_KEY")
-    try:
-        with httpx.Client(timeout=60) as client:
-            resp = client.post(
-                "https://api.openai.com/v1/responses",
-                headers={"Authorization": f"Bearer {api_key}"},
-                json={"model": "gpt-4o-mini", "input": "test"}
-            )
-            results["http_post"] = {"status": "ok", "code": resp.status_code}
-    except Exception as e:
-        results["http_post"] = {"status": "error", "error": str(e), "type": type(e).__name__}
-    
-    return results
+# Include debug/health endpoints
+app.include_router(debug_router)
 
 
 @app.post("/process", response_model=APIResponse)
@@ -105,46 +33,44 @@ async def process_transcript(
     request: TranscriptRequest,
     x_api_key: str = Header(..., description="User API key for authentication")
 ):
-    """
-    Process a voice transcript.
-    
-    1. Authenticate user by API key
-    2. Classify the transcript using OpenAI
-    3. Save to user's Notion database
-    4. Return confirmation
-    """
+    """Process a voice transcript."""
     # 1. Authenticate user
     user = get_user_config(x_api_key)
     if user is None:
         raise HTTPException(status_code=401, detail="Invalid API key")
     
     logger.info(f"Processing transcript for user: {user.name}")
-    
+    if (request.text == ""):
+        logger.error("Empty transcript")
+        return APIResponse(
+            success=False,
+            message="Empty transcript"
+        )
     # 2. Classify the transcript
     try:
         classification = await classify_transcript(request.text)
         logger.info(f"Classified as: {classification.category} - {classification.title}")
     except Exception as e:
         logger.error(f"Classification failed: {e}")
-        raise HTTPException(status_code=500, detail="Failed to classify transcript")
+        return APIResponse(
+            success=False,
+            message="Failed to classify transcript"
+        )
     
-    # 3. Save to Notion based on category
-    save_functions = {
-        "idea": save_idea,
-        "task": save_task,
-        "appointment": save_appointment,
-        "spending": save_spending
-    }
-    
-    save_func = save_functions.get(classification.category, save_idea)
-    success = await save_func(
+    # 3. Save to Notion
+    success = await save_entry(
         database_id=user.notion_database_id,
+        category=classification.category,
         title=classification.title,
         description=classification.description
     )
     
     if not success:
-        raise HTTPException(status_code=500, detail="Failed to save to Notion")
+        logger.error("Failed to save to Notion")
+        return APIResponse(
+            success=False,
+            message="Failed to save to Notion"
+        )
     
     # 4. Return confirmation
     return APIResponse(
