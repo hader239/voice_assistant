@@ -77,5 +77,5 @@ async def process_transcript(
     # 4. Return confirmation
     return APIResponse(
         success=True,
-        message=f"Saved {classification.category}: {classification.title}"
+        message=f"Saved {classification.category}: {classification.title}, {classification.description}. {classification.date}, {classification.amount}"
     )

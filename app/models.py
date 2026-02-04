@@ -28,3 +28,4 @@ class APIResponse(BaseModel):
     """Response sent back to iOS Shortcut."""
     success: bool
     message: str
+    
