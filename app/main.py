@@ -62,7 +62,9 @@ async def process_transcript(
         database_id=user.notion_database_id,
         category=classification.category,
         title=classification.title,
-        description=classification.description
+        description=classification.description,
+        date=classification.date,
+        amount=classification.amount
     )
     
     if not success:

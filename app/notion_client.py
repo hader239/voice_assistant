@@ -2,6 +2,7 @@
 
 import os
 import logging
+from typing import Optional
 from notion_client import Client
 
 logger = logging.getLogger(__name__)
@@ -18,15 +19,34 @@ def get_client() -> Client:
     return _client
 
 
-async def save_entry(database_id: str, category: str, title: str, description: str) -> bool:
+async def save_entry(
+    database_id: str,
+    category: str,
+    title: str,
+    description: str,
+    date: Optional[str] = None,
+    amount: Optional[float] = None
+) -> bool:
     """Save an entry to Notion."""
     try:
+        # Build properties
+        properties = {
+            "Name": {"title": [{"text": {"content": title}}]},
+            "Type": {"select": {"name": category.capitalize()}},
+            "Checkbox": {"checkbox": False}  # Always false
+        }
+        
+        # Add date for appointments
+        if date:
+            properties["Date"] = {"date": {"start": date}}
+        
+        # Add amount for spending
+        if amount is not None:
+            properties["Amount"] = {"number": amount}
+        
         get_client().pages.create(
             parent={"database_id": database_id},
-            properties={
-                "Name": {"title": [{"text": {"content": title}}]},
-                "Type": {"select": {"name": category.capitalize()}}
-            },
+            properties=properties,
             children=[{
                 "object": "block",
                 "type": "paragraph",

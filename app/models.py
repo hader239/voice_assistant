@@ -1,7 +1,7 @@
 """Pydantic models for the Voice Assistant API."""
 
 from pydantic import BaseModel
-from typing import Literal
+from typing import Literal, Optional
 
 
 class TranscriptRequest(BaseModel):
@@ -11,9 +11,11 @@ class TranscriptRequest(BaseModel):
 
 class ClassificationResult(BaseModel):
     """Result from OpenAI classification."""
-    category: Literal["idea", "task", "appointment", "spending"]
+    category: Literal["idea", "task", "appointment", "spending", "unsorted"]
     title: str
     description: str
+    date: Optional[str] = None  # ISO date for appointments (YYYY-MM-DD)
+    amount: Optional[float] = None  # Amount for spending entries
 
 
 class UserConfig(BaseModel):
