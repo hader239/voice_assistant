@@ -33,7 +33,7 @@ async def save_entry(
         properties = {
             "Name": {"title": [{"text": {"content": title}}]},
             "Type": {"select": {"name": category.capitalize()}},
-            "Checkbox": {"checkbox": False}  # Always false
+            "Checkbox": {"checkbox": False}, # Always false
             "Description": {"text": {"content": description}}
         }
         
