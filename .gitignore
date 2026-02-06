@@ -138,6 +138,9 @@ celerybeat.pid
 .env
 .envrc
 .venv
+
+# User configuration with secrets
+users.json
 env/
 venv/
 ENV/

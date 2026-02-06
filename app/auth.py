@@ -1,18 +1,25 @@
 """User authentication and configuration lookup."""
 
 import json
+import os
 from pathlib import Path
 from typing import Optional
 
 from .models import UserConfig
 
 
-# Load users configuration from JSON file
+# Load users configuration from JSON file (local) or env var (Railway)
 USERS_FILE = Path(__file__).parent.parent / "users.json"
 
 
 def load_users() -> dict:
-    """Load users configuration from users.json."""
+    """Load users configuration from USERS_CONFIG env var or users.json file."""
+    # First, check for USERS_CONFIG env var (used in Railway deployment)
+    users_config = os.getenv("USERS_CONFIG")
+    if users_config:
+        return json.loads(users_config)
+    
+    # Fall back to users.json file (local development)
     if not USERS_FILE.exists():
         return {"users": {}}
     

@@ -22,6 +22,7 @@ class UserConfig(BaseModel):
     """User configuration from users.json."""
     name: str
     notion_database_id: str
+    notion_secret: str
 
 
 class APIResponse(BaseModel):

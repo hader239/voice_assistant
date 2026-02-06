@@ -59,6 +59,7 @@ async def process_transcript(
     
     # 3. Save to Notion
     success = await save_entry(
+        notion_secret=user.notion_secret,
         database_id=user.notion_database_id,
         category=classification.category,
         title=classification.title,

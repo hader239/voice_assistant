@@ -7,19 +7,9 @@ from notion_client import Client
 
 logger = logging.getLogger(__name__)
 
-# Cached client
-_client = None
-
-
-def get_client() -> Client:
-    """Get Notion client (with caching)."""
-    global _client
-    if _client is None:
-        _client = Client(auth=os.getenv("NOTION_API_KEY"))
-    return _client
-
 
 async def save_entry(
+    notion_secret: str,
     database_id: str,
     category: str,
     title: str,
@@ -45,7 +35,8 @@ async def save_entry(
         if amount is not None:
             properties["Amount"] = {"number": amount}
         
-        get_client().pages.create(
+        client = Client(auth=notion_secret)
+        client.pages.create(
             parent={"database_id": database_id},
             properties=properties
         )
